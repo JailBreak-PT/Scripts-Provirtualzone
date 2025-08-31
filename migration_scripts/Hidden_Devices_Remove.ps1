@@ -1,22 +1,19 @@
-﻿
 # =====================================================================================
+# Name:    Hidden_Devices_Remove.ps1
+# Author:  Luciano Patrao
+# Version: 1.3
 #
-# Data criação: 28/08/2025
-# Autor: Luciano Patrao
-# Ultima actualização: v1.1 29/08/2025
+# Purpose: Cleans a Windows VM after migration by removing old, hidden ('ghost')
+#          VMware hardware devices to prevent driver conflicts.
 #
-# Objetivo: Limpar uma VM Windows após a migração, removendo dispositivos de hardware
-#           VMware antigos e ocultos ("ghost") para prevenir conflitos de drivers.
-#
-# UTILIZAÇÃO: Executar como Administrador na nova VM em Hyper-V, ANTES de restaurar
-#             a configuração de rede. Um reinício após a execução é recomendado.
+# USAGE:   Run as Administrator on the new VM (e.g., on Hyper-V) BEFORE
+#          reconfiguring the network. A reboot is recommended after execution.
 # =====================================================================================
 
 Clear-Host
 
 # 0. Check if the script is running as Administrator
-if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
-    ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Write-Error "This script must be run with Administrator privileges."
     exit 1
 }
@@ -68,30 +65,30 @@ else {
 }
 
 Write-Host "============================================================"
-Write-Host "--- Início do Script de Limpeza de Dispositivos VMware ---"
+Write-Host "--- Starting VMware Device Cleanup Script ---"
 Write-Host "============================================================"
 
 
     $vmwareTools = Get-CimInstance -ClassName Win32_Product | Where-Object { $_.Name -like "VMware Tools" }
     if ($vmwareTools) {
-        Write-Host "  > VMware Tools encontradas. Não é possivel continuar..."
-        #exit 1
+        Write-Host "  > VMware Tools detected. Cannot continue..." -ForegroundColor Red
+        exit 1
         }
      
 
-# 1. Definir os padrões de nomes de dispositivos VMware a procurar
+# 1. Define the patterns of VMware device names to search for
 $vmwareDevicePatterns = @(
-    "*VMware*",                  # Captura a maioria dos dispositivos (SVGA, SCSI, etc.)
-    "vmxnet3*",                 # Captura o adaptador de rede VMXNET3
-    "Intel(R) 82574L*"          # Captura o adaptador de rede E1000 comummente emulado pelo VMware
+    "*VMware*",                  # Catches most devices (SVGA, SCSI, etc.)
+    "vmxnet3*",                 # Catches the VMXNET3 network adapter
+    "Intel(R) 82574L*"          # Catches the E1000 network adapter commonly emulated by VMware
 )
 
-Write-Host "`n[PASSO 1/3] A procurar por dispositivos VMware antigos..." -ForegroundColor Cyan
+Write-Host "`n[STEP 1/3] Searching for old VMware devices..." -ForegroundColor Cyan
 
-# 2. Encontrar todos os dispositivos (incluindo os ocultos) que correspondem aos padrões
+# 2. Find all devices (including hidden ones) that match the patterns
 $devicesToRemove = @()
 foreach ($pattern in $vmwareDevicePatterns) {
-    # Adiciona os dispositivos encontrados à lista, evitando duplicados
+    # Add the found devices to the list, avoiding duplicates
     $found = Get-PnpDevice -FriendlyName $pattern -ErrorAction SilentlyContinue
     if ($found) {
         $devicesToRemove += $found
@@ -99,39 +96,39 @@ foreach ($pattern in $vmwareDevicePatterns) {
 }
 $devicesToRemove = $devicesToRemove | Sort-Object -Property InstanceId -Unique
 
-# 3. Remover os dispositivos encontrados
+# 3. Remove the found devices
 if ($devicesToRemove) {
-    Write-Host "`n[PASSO 2/3] Os seguintes dispositivos VMware serão removidos:" -ForegroundColor Yellow
-    $devicesToRemove | Format-Table Name, Class, Status, InstanceId -AutoSize
+    Write-Host "`n[STEP 2/3] The following VMware devices will be removed:" -ForegroundColor Yellow
+    $devicesToRemove | Format-Table @{N='Name';E={$_.FriendlyName}}, Class, Status, InstanceId -AutoSize
     
-    Read-Host "Prima Enter para continuar com a remoção..."
+    Read-Host "Press Enter to continue with the removal..."
 
     foreach ($device in $devicesToRemove) {
-        Write-Host "A remover dispositivo: '$($device.Name)'..."
-        # Usa o Start-Process para uma execução mais controlada do pnputil.exe
-        $proc = Start-Process -FilePath "pnputil.exe" -ArgumentList "/remove-device `"$($device.InstanceId)`" /force" -Wait -PassThru -WindowStyle Hidden
+        Write-Host "Removing device: '$($device.FriendlyName)'..."
+        # Use Start-Process for more controlled execution of pnputil.exe
+        $proc = Start-Process -FilePath "pnputil.exe" -ArgumentList "/remove-device `"$($device.InstanceId)`" /subtree /force" -Wait -PassThru -WindowStyle Hidden
         
         if ($proc.ExitCode -eq 0) {
-            Write-Host "  > Removido com sucesso." -ForegroundColor Green
+            Write-Host "  > Removed successfully." -ForegroundColor Green
         } else {
-            # O código de erro 3010 significa que um reinício é necessário, o que é um sucesso.
+            # Exit code 3010 means a reboot is required, which is a success.
             if ($proc.ExitCode -eq 3010) {
-                 Write-Host "  > Removido com sucesso. (Reinício pendente)" -ForegroundColor Green
+                 Write-Host "  > Removed successfully. (Reboot pending)" -ForegroundColor Green
             } else {
-                 Write-Warning "  > Falha ao remover o dispositivo. Código de Saída: $($proc.ExitCode)"
+                 Write-Warning "  > Failed to remove the device. Exit Code: $($proc.ExitCode)"
             }
         }
     }
 
-    Write-Host "`n[PASSO 3/3] A re-analisar o hardware do sistema..." -ForegroundColor Cyan
-    # Pede ao Windows para re-analisar o barramento de dispositivos
+    Write-Host "`n[STEP 3/3] Re-scanning system hardware..." -ForegroundColor Cyan
+    # Ask Windows to re-scan the device bus
     Start-Process -FilePath "pnputil.exe" -ArgumentList "/scan-devices" -Wait -NoNewWindow
     
 } else {
-    Write-Host "`n[INFO] Nenhum dispositivo VMware antigo foi encontrado." -ForegroundColor Green
-    Write-Host "`n[SUCESSO] O processo de limpeza foi concluído." -ForegroundColor Green
+    Write-Host "`n[INFO] No old VMware devices were found." -ForegroundColor Green
+    Write-Host "`n[SUCCESS] The cleanup process is complete." -ForegroundColor Green
     exit 1
 }
 
-Write-Host "`n[SUCESSO] O processo de limpeza foi concluído." -ForegroundColor Green
-Write-Host "É recomendado reiniciar a VM antes de restaurar a rede."
+Write-Host "`n[SUCCESS] The cleanup process is complete." -ForegroundColor Green
+Write-Host "It is recommended to restart the VM before reconfiguring the network."
