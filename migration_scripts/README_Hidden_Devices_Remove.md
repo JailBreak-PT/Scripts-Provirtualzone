@@ -53,11 +53,11 @@ The `PostCutover_Network_Sanity.ps1` script is a **more comprehensive, all-in-on
 ## How to Use
 
 1.  **Important:** For best results, uninstall VMware Tools **before** migrating the VM.
-2.  Copy the `Hidden_Devices_Remove v1.3.ps1` script to the newly migrated VM.
+2.  Copy the `Hidden_Devices_Remove.ps1` script to the newly migrated VM.
 3.  Open PowerShell **as an Administrator**.
 4.  Navigate to the script's location and run it:
     ```powershell
-    .\'Hidden_Devices_Remove v1.3.ps1'
+    .\'Hidden_Devices_Remove.ps1'
     ```
 5.  The script will show you a summary of the devices it found. Carefully review this list.
 6.  Press **Enter** to confirm and begin the removal process.
