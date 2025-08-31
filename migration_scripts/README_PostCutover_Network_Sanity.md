@@ -1,73 +1,73 @@
-# PostCutover_Network_Sanity.ps1
+# PostCutover\_Network\_Sanity.ps1
 
-Clean Windows VMs after migrating off VMware without breaking networking.
+A robust, safe, and automated PowerShell script to clean Windows VMs after migrating off VMware to Hyper-V, Proxmox, or another hypervisor.
 
-- Removes only nonpresent VMware NICs
-- Optional cleanup of VMware-named DriverStore packages
-- Backups and logs before risky actions
-- Built-in restore for drivers and IPs (opt-in)
-- Color output with clear levels (use `-NoColor` to disable)
+  - **Runs all cleanup tasks by default** (no parameters needed).
+  - **Performs a pre-scan** and exits if the system is already clean.
+  - **Cleans ALL non-present VMware devices** (NICs, disks, mouse, etc.) using a proven, pattern-based search.
+  - **Forcefully removes corrupted VMware Tools** when the standard uninstaller fails (interactive).
+  - Optionally cleans up VMware-named DriverStore packages.
+  - Creates comprehensive **backups and detailed logs** before any changes are made.
+  - Includes a built-in **restore function** for drivers and IP configurations.
+  - Provides clear, color-coded output (can be disabled with `-NoColor`).
 
 ## Why use it
 
-- You migrated a VM from VMware to Hyper-V, Proxmox, or another hypervisor.
-- You want a clean device list and stable networking.
-- You need a reversible, auditable process.
+  - You migrated a VM from VMware to Hyper-V, Proxmox, or another hypervisor.
+  - You want a clean device list and stable networking.
+  - You need a reversible, auditable, and highly automated process.
 
 ## Requirements
 
-- Windows PowerShell 5.1+
-- Run as Administrator
-- Copy the script into the VM **before** cutover
+  - Windows PowerShell 5.1+
+  - Run as Administrator
+  - It is recommended to copy the script into the VM **before** the final cutover for convenience.
 
 ## Safety rules
 
-- If the VM is running on VMware, the script warns and asks twice before continuing.
-- If VMware Tools is installed, the script offers to uninstall it, then stops. Reboot and run again.
-- No TCP/IP reset. No `netcfg -d`.
-- No registry edits except when steps target clearly VMware‑named items. Default path does not touch registry.
+  - If the script detects it's running on a **VMware** platform, it will warn you and require multiple confirmations before proceeding.
+  - If **VMware Tools** is still installed, the script will first offer to run the standard uninstaller. If that fails, it will then offer to perform a more aggressive, forceful removal as a last resort. The script will stop after any uninstall attempt, requiring a reboot.
+  - The script does not perform destructive network resets **by default**. Actions like `-WinsockReset` are strictly opt-in.
+  - The main cleanup path for devices and drivers does not modify the registry. The **forceful VMware Tools removal** option is an exception and will remove specific VMware registry keys as a last resort.
 
 ## Quick start
 
 ```powershell
-# Fast cleanup with backups
-.\PostCutover_Network_Sanity.ps1 -Cleanup
+# Run ALL cleanup tasks automatically (Default)
+# This finds and removes devices, cleans the DriverStore, flushes DNS, and resets Winsock.
+.\PostCutover_Network_Sanity.ps1
 
-# Cleanup + remove VMware driver packages
-.\PostCutover_Network_Sanity.ps1 -Cleanup -RemoveDriverStore
+# To run ONLY the device cleanup
+.\PostCutover_Network_Sanity.ps1 -CleanupDevices
 
-# DNS cache only
-.\PostCutover_Network_Sanity.ps1 -FlushDns
-
-# Winsock only (reboot recommended)
-.\PostCutover_Network_Sanity.ps1 -WinsockReset
-
-# Dry run (no changes)
-.\PostCutover_Network_Sanity.ps1 -Cleanup -WhatIf
+# Dry run: Show what would be cleaned without making changes
+.\PostCutover_Network_Sanity.ps1 -WhatIf
 ```
 
 ## Parameters
 
-- `-Cleanup` remove nonpresent VMware NICs. Creates a backup first.
-- `-RemoveDriverStore` remove VMware‑named DriverStore packages. Creates a backup first.
-- `-FlushDns` flush DNS cache only.
-- `-WinsockReset` reset Winsock only. Reboot recommended.
-- `-Restore` restore drivers from the latest backup or `-BackupPath`.
-- `-RestoreIP` with `-Restore`, reapply saved IPs by MAC or alias.
-- `-BackupPath <folder>` use a specific `C:\PostMig\Backups\YYYYMMDD_HHMMSS` path.
-- `-NoColor` disable colored console output.
-- `-WhatIf` show actions without changing anything.
+  - **Default (No Parameters)**: Runs all cleanup tasks in sequence: `CleanupDevices`, `RemoveDriverStore`, `FlushDns`, and `WinsockReset`.
+  - `-CleanupDevices`: Removes **ALL** non-present VMware devices found using pattern matching. Creates a backup first.
+  - `-RemoveDriverStore`: Removes VMware‑named DriverStore packages. Creates a backup first.
+  - `-FlushDns`: Flushes the DNS cache only.
+  - `-WinsockReset`: Resets Winsock only. A reboot is recommended.
+  - `-Restore`: Restores drivers from the latest backup or from the path specified with `-BackupPath`.
+  - `-RestoreIP`: Used with `-Restore`, this will also reapply the saved IP configuration.
+  - `-BackupPath <folder>`: Specifies a custom backup path to use for a restore operation.
+  - `-NoColor`: Disables colored console output.
+  - `-WhatIf`: Shows the actions the script would take without actually performing them.
 
 ## Output
 
-Backups
-- `C:\PostMig\Backups\YYYYMMDD_HHMMSS\Drivers\` DriverStore export
-- `C:\PostMig\Backups\YYYYMMDD_HHMMSS\DeviceInventory.csv`
-- `C:\PostMig\Backups\YYYYMMDD_HHMMSS\IPConfig.csv`
-- `C:\PostMig\Backups\YYYYMMDD_HHMMSS\IPConfig.json`
+### Backups
 
-Logs
-- `C:\PostMig\Logs\PostCutover_Network_Sanity_YYYYMMDD_HHMMSS.log`
+  - `C:\PostMig\Backups\YYYYMMDD_HHMMSS\Drivers\` (DriverStore export)
+  - `C:\PostMig\Backups\YYYYMMDD_HHMMSS\DeviceInventory.csv`
+  - (and other log files for specific operations)
+
+### Logs
+
+  - `C:\PostMig\Logs\PostCutover_Network_Sanity_YYYYMMDD_HHMMSS.log`
 
 ## Restore
 
@@ -75,27 +75,24 @@ Logs
 # Restore drivers from the latest backup
 .\PostCutover_Network_Sanity.ps1 -Restore
 
-# Restore drivers and saved IPs
+# Restore drivers and the saved IP configuration
 .\PostCutover_Network_Sanity.ps1 -Restore -RestoreIP
 
-# Restore from a specific backup
-.\PostCutover_Network_Sanity.ps1 -Restore -BackupPath C:\PostMig\Backups50831_120000
+# Restore from a specific, older backup
+.\PostCutover_Network_Sanity.ps1 -Restore -BackupPath C:\PostMig\Backups\YYYYMMDD_HHMMSS
 ```
 
 ## Validation checklist
 
-- No VMware ghost NICs in Device Manager
-- `pnputil /enum-drivers` has no vmxnet/pvscsi/vmci packages (if removed)
-- `vssadmin list providers` shows only Microsoft (if you removed VMware provider elsewhere)
-- IP, DNS, gateway unchanged on the active NIC
-- Log shows clean completion
+  - No VMware ghost **devices** in Device Manager (check "Show hidden devices").
+  - `pnputil /enum-drivers` has no vmxnet/pvscsi/vmci packages (if `-RemoveDriverStore` was used).
+  - IP, DNS, and gateway are unchanged on the active NIC.
+  - The log file in `C:\PostMig\Logs` shows a clean completion.
 
 ## Notes
 
-- Run on the first boot after cutover.
-- Prefer console access on first run.
-- Keep `Hidden_Devices_Remove.ps1` if you want a quick, single-purpose cleanup.
-- This script adds backups, restore, and a clearer operator experience.
+  - For best results, run the script on the first boot after the migration is complete.
+  - Using a direct console session (like Hyper-V's Virtual Machine Connection) is recommended for the first run.
 
 ## License
 
