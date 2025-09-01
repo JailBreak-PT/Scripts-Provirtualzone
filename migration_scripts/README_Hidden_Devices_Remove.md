@@ -1,6 +1,6 @@
 # Hidden\_Devices\_Remove.ps1
 
-A focused PowerShell script to safely find and remove old, non-present ('ghost') VMware hardware devices from a Windows VM after it has been migrated to a new platform like Hyper-V or Proxmox.
+A PowerShell script to safely find and remove old, non-present ('ghost') VMware hardware devices from a Windows Guet OS VM after it has been migrated to a new platform like Hyper-V or Proxmox.
 
   - **Simple and Fast:** Designed for a quick and easy device cleanup.
   - **Safe by Design:** Includes multiple safety checks and refuses to run if VMware Tools is detected.

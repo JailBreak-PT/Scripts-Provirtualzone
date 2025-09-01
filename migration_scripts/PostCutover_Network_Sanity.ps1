@@ -1,7 +1,7 @@
 # =====================================================================================
 # Name: PostCutover_Network_Sanity_v2.2.ps1
-# Created: 2025-08-31
-# Author: Luciano Patrao (with colorized output and built-in restore)
+# Created: 31/08/2025
+# Author: Luciano Patrao 
 #
 # --- CHANGE LOG ---
 # v2.2: Integrated user-provided, field-tested device removal logic.

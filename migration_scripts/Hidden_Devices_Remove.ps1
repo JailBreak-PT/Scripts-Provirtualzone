@@ -2,6 +2,7 @@
 # Name:    Hidden_Devices_Remove.ps1
 # Author:  Luciano Patrao
 # Version: 1.3
+# Date: 31/08/20285
 #
 # Purpose: Cleans a Windows VM after migration by removing old, hidden ('ghost')
 #          VMware hardware devices to prevent driver conflicts.

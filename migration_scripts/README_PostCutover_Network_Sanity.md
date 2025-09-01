@@ -1,6 +1,6 @@
 # PostCutover\_Network\_Sanity.ps1
 
-A robust, safe, and automated PowerShell script to clean Windows VMs after migrating off VMware to Hyper-V, Proxmox, or another hypervisor.
+A robust, safe, and automated PowerShell script to clean Windows Guest OS VMs after migrating off VMware to Hyper-V, Proxmox, or another hypervisor.
 
   - **Runs all cleanup tasks by default** (no parameters needed).
   - **Performs a pre-scan** and exits if the system is already clean.

@@ -2,6 +2,7 @@
 # Name:    Force-RemoveVMwareTools.ps1
 # Author:  Luciano Patrao
 # Version: 1.3
+# Date: 31/08/2025
 #
 # Purpose: Forcefully removes a corrupted VMware Tools installation when standard
 #          uninstall methods have failed. USE AS A LAST RESORT.

@@ -48,6 +48,8 @@ You should use this script when:
 5.  Type **`YES`** and press **Enter** to confirm and begin the removal.
 6.  **Reboot the machine immediately** after the script finishes.
 
+Use it with careful and only use it if you are sure that you want to this manually. 
+
 -----
 
 ## The Process (What it Does)
