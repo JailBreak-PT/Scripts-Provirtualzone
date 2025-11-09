@@ -87,6 +87,67 @@ The script follows a safe, three-step process:
 
 -----
 
+Certainly. The analysis in the report I just provided contains all the technical details and justification for the v3.0.0 release.
+
+Based on that analysis, here is the final, formatted content for your `CHANGELOG.md` file. This format is based on the "Keep a Changelog" standard, which is designed to be human-readable and clear.[1, 13, 2, 14] It lists the most recent version first [15] and groups all changes by type—such as `Added`, `Changed`, and `Removed`—so your users can quickly see what is new and what might break their existing workflows.[13, 16, 17]
+
+For a major v3.0 release like this, it is crucial to clearly highlight the "Breaking changes," which this template does.[13, 18, 19]
+
+Here is the content for your `CHANGELOG.md` file:
+
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) [1, 2],
+and this project adheres to([https://semver.org/spec/v2.0.0.html](https://semver.org/spec/v2.0.0.html)).[1, 3]
+
+## [3.0.0][3.0.0] - 2025-11-09
+
+*This is a major architectural release, refactoring the tool from a standalone script
+to a full PowerShell advanced function. This introduces significant new features but
+also **breaking changes**. Please review the `Changed` and `Removed` sections
+carefully before upgrading.*
+
+### Changed
+
+  * **Breaking:** The tool is now an advanced function, `Get-MyTool`, distributed
+    as a PowerShell module. The previous `YourScript-v2.ps1` file is no
+    longer used and this breaks the v2.0 execution method.[4, 3]
+      * **v2.0 Execution:** `C:\Temp\YourScript-v2.ps1 -File "C:\log.txt"`
+      * **v3.0 Execution:** `Import-Module MyTool; Get-MyTool -Path "C:\log.txt"`
+  * **Breaking:** The function now outputs structured \`\` data to the
+    pipeline instead of unstructured strings.[5] This allows for
+    downstream processing (e.g., `| Export-Csv`, \`| Where-Object\`).
+  * **Breaking:** Renamed parameter `-File` to `-Path` to support pipeline
+    binding and align with PowerShell naming conventions.[6, 7]
+
+### Added
+
+  * Added support for `-WhatIf` and `-Confirm` via \`\`.[8]
+    Destructive operations can now be safely previewed before execution.[9]
+  * Added full support for pipeline input via the `process` block.[10] The function
+    can now process objects in a stream (e.g., `Get-Content 'servers.txt' | Get-MyTool`).
+  * Added support for all PowerShell Common Parameters (`-Verbose`, `-Debug`,
+    `-ErrorAction`, etc.) through the \`\` attribute.[5]
+  * Added advanced parameter validation (e.g., `[Parameter(Mandatory=$true)]`, \`\`)
+    to fail fast and provide clearer errors on incorrect input.[11, 12]
+
+### Removed
+
+  * **Breaking:** Removed the deprecated `-LegacyFlag` parameter.
+  * **Breaking:** Removed internal, non-PowerShell-based error-handling logic.
+    The function now uses standard PowerShell terminating (`throw`) and
+    non-terminating errors.
+
+### Fixed
+
+  * (Example) Fixed a logic error where processing items in a specific edge
+    case would fail silently. The function now reports a non-terminating error.
+
+[unreleased]: https://www.google.com/search?q=%5Bhttps://github.com/YOUR_USER/YOUR_REPO/compare/v3.0.0...HEAD%5D\(https://github.com/YOUR_USER/YOUR_REPO/compare/v3.0.0...HEAD\)
+[3.0.0]: https://www.google.com/search?q=%5Bhttps://github.com/YOUR_USER/YOUR_REPO/compare/v2.0.0...v3.0.0%5D\(https://github.com/YOUR_USER/YOUR_REPO/compare/v2.0.0...v3.0.0\)
+
 ## License
 
 MIT
