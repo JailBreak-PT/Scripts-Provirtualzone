@@ -1,106 +1,128 @@
-# Windows Pre & Post Migration Scripts
+# Scripts-Provirtualzone
 
-Two PowerShell scripts that handle the **before** and **after** of a VMware to Hyper-V migration. They work as a pair — Phase 1 captures the VM state, Phase 2 restores it on the new platform.
+## Windows Migration Toolkit (VMware to Hyper-V)
 
-- **Dual-Path Compatibility:** Automatically detects PowerShell version and uses modern cmdlets (PS 4.0+) or legacy fallback (WMI, netsh, diskpart) for PS 3.0.
-- **No Dependencies:** Uses only built-in Windows cmdlets. No internet, no modules, no installs required.
-- **Enterprise Ready:** Designed for restricted environments running PowerShell ISE as Administrator.
-- **Tested on:** Windows Server 2012 R2, 2016, 2019, and 2022.
+A complete set of PowerShell scripts for migrating Windows VMs from VMware to Hyper-V (or Proxmox). Designed for **restricted enterprise environments** with no internet access and no ability to install additional software.
 
----
+### Recommended Workflow
 
-## Scripts
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  1. BEFORE MIGRATION — Run on the VMware VM                     │
+│     → Windows_PreMigration_Fase1_v3.5.ps1                       │
+│       Backs up network, creates migration user, removes         │
+│       VMware Tools                                              │
+├─────────────────────────────────────────────────────────────────┤
+│  2. MIGRATION                                                    │
+│     → Perform V2V (SCVMM, StarWind, or other V2V tool)          │
+├─────────────────────────────────────────────────────────────────┤
+│  3. AFTER MIGRATION — Run on the Hyper-V VM                      │
+│     → Windows_PostMigration_Fase2_v3.5.ps1                      │
+│       Restores network (IP/DNS/Gateway), disables IPv6,          │
+│       brings data disks online and fixes drive letters           │
+├─────────────────────────────────────────────────────────────────┤
+│  4. CLEANUP — Run on the Hyper-V VM                              │
+│     → Hidden_Devices_Remove_Total_v3_0.ps1 (recommended)        │
+│       Removes ghost VMware devices, cleans DriverStore,          │
+│       flushes DNS, resets Winsock, backup & restore support      │
+│                                                                  │
+│     → Force_VMwareToolsRemove.ps1 (only if needed)              │
+│       Last resort for corrupted VMware Tools that won't          │
+│       uninstall through normal methods                           │
+├─────────────────────────────────────────────────────────────────┤
+│  5. REBOOT and validate                                          │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-| Script | Phase | Purpose |
-|--------|-------|---------|
-| `Windows_PreMigration_Fase1_v3.5.ps1` | **Before** migration | Backup network, create migration user, remove VMware Tools |
-| `Windows_PostMigration_Fase2_v3.5.ps1` | **After** migration | Restore network, disable IPv6, validate and fix data disks |
+### Script Inventory
 
----
+| Script | Purpose | Version |
+|--------|---------|---------|
+| `Windows_PreMigration_Fase1_v3.5.ps1` | Pre-migration: network backup, local admin creation, VMware Tools removal | v3.5 |
+| `Windows_PostMigration_Fase2_v3.5.ps1` | Post-migration: network restore, IPv6 disable, data disk validation | v3.5 |
+| `Hidden_Devices_Remove_Total_v3_0.ps1` | **Full cleanup toolkit** — ghost devices, DriverStore, DNS, Winsock, with `-Aggressive` mode | v3.0 |
+| `Force_VMwareToolsRemove.ps1` | Last resort forceful VMware Tools removal (services, drivers, registry) | v1.0 |
+| `Hidden_Devices_Remove.ps1` | ⚠️ **Superseded by v3.0** — Simple ghost device removal (kept for reference) | v1.3 |
+| `PostCutover_Network_Sanity.ps1` | ⚠️ **Superseded by v3.0** — Cleanup toolkit without aggressive mode (kept for reference) | v2.2 |
 
-## Quick Start
+### GPO Scripts (subfolder: `GPO Scripts/`)
 
-### Phase 1: Pre-Migration (run on the VMware VM)
+| Script | Purpose | Version |
+|--------|---------|---------|
+| `Windows_PreMigration_Fase1_v1.0_GPO.ps1` | Unattended pre-migration for AD OU deployment via Group Policy | v1.0 |
+| `README_GPO_Deployment.md` | Step-by-step GPO deployment guide | — |
 
-1. Copy `Windows_PreMigration_Fase1_v3.5.ps1` to the VM
-2. Open **PowerShell ISE** as Administrator
-3. Edit the configuration block at the top:
-   ```powershell
-   $workingDir    = "C:\Migration"        # Where to save backup files
-   $migrationUser = "migrationadmin"      # Local admin account name
-   ```
-4. Run the script (F5)
+> **Note:** `Hidden_Devices_Remove_Total_v3_0.ps1` is the unified evolution of both `Hidden_Devices_Remove.ps1` (v1.3) and `PostCutover_Network_Sanity.ps1` (v2.2). It combines all features from both scripts and adds the new `-Aggressive` mode for forced service removal. **New users should use v3.0.**
 
-### Phase 2: Post-Migration (run on the Hyper-V VM)
+### Compatibility
 
-1. Copy `Windows_PostMigration_Fase2_v3.5.ps1` to the VM
-2. Make sure the network backup XML from Phase 1 is in the same path
-3. Open **PowerShell ISE** as Administrator
-4. Edit the configuration block:
-   ```powershell
-   $workingDir = "C:\Migration"           # Must match the Phase 1 path
-   ```
-5. Run the script (F5)
+All scripts automatically detect the PowerShell version and use the appropriate cmdlets:
 
-> **Important:** The `$workingDir` path must be the same in both scripts. Phase 2 reads the backup file created by Phase 1.
+| Windows Server | PowerShell | Method |
+|---------------|------------|--------|
+| 2012 R2 | 3.0 / 4.0 | WMI, netsh, diskpart (legacy fallback) |
+| 2016 | 5.1 | Modern cmdlets (NetAdapter, Storage) |
+| 2019 | 5.1 | Modern cmdlets (NetAdapter, Storage) |
+| 2022 | 5.1 | Modern cmdlets (NetAdapter, Storage) |
 
----
+### Requirements
 
-## What Each Script Does
+- Run as **Administrator** (PowerShell ISE recommended)
+- No internet access required
+- No external modules or dependencies
+- Works with built-in Windows cmdlets only
 
-### Phase 1 — Pre-Migration
+### Documentation
 
-| Step | Action | Description |
-|------|--------|-------------|
-| 1 | **Network Backup** | Exports full network config (IP, DNS, Gateway, MAC) to XML |
-| 2 | **Create Migration User** | Creates a local administrator account with visible password prompt |
-| 3 | **Uninstall VMware Tools** | Optionally removes VMware Tools with user confirmation |
-| 4 | **Shutdown** | Optional VM shutdown (commented out by default) |
+Each script has its own detailed README:
 
-### Phase 2 — Post-Migration
-
-| Step | Action | Description |
-|------|--------|-------------|
-| 1 | **Import Backup** | Reads the network backup XML created by Phase 1 |
-| 2 | **Restore Network** | Matches adapters by MAC address, restores IP/DNS/Gateway, renames adapters to original names |
-| 3 | **Disable IPv6** | Disables IPv6 on all adapters (modern cmdlets or registry fallback) |
-| 4 | **Fix Data Disks** | Brings disks online, removes read-only, fixes drive letters |
-
----
-
-## Phase 2 — Disk Handling Details
-
-The post-migration disk validation handles several common issues after a V2V migration:
-
-- **CD/DVD on D:** — Automatically moves CD/DVD drive from D: to Z: to free up the letter for data disks.
-- **Offline disks** — Brings all data disks online and removes read-only flags.
-- **Drive letter D:** — Assigns D: to the largest partition on Disk 1 (common for data drives).
-- **Orphaned mount points** — Cleans up via CIM, Storage module, diskpart, and mountvol.
-- **No Disk 1** — Safely skips all Disk 1 operations if the system only has an OS disk.
-- **Dual-path execution** — Uses Storage module when available, falls back to diskpart/CIM for older systems.
-
----
-
-## Security Notes
-
-### Phase 1 — Password Handling
-- Password input is **visible** on screen during typing (by design, for restricted environments).
-- Password is displayed on screen after confirmation for verification.
-- Password is **NOT logged** to any file or transcript.
-- Password variables are cleared from memory after user creation.
-- The migration account should be removed after migration is complete.
-
-### Phase 2 — No Credentials
-- Network configuration is restored from the XML backup — no credentials are stored or needed.
-- All operations use built-in Windows cmdlets with no external calls.
+| README | Covers |
+|--------|--------|
+| `README_PrePostMigration.md` | Pre-migration (Fase1) and Post-migration (Fase2) scripts |
+| `README_Hidden_Devices_Remove.md` | Hidden Devices Remove scripts (v1.3 and v3.0) |
+| `README_PostCutover_Network_Sanity.md` | PostCutover Network Sanity script (v2.2) |
+| `README_VMwareToolsRemove.md` | Force VMware Tools Remove script |
+| `GPO Scripts/README_GPO_Deployment.md` | GPO deployment guide for AD OU automation |
 
 ---
 
-## What To Run Next
+## Changelog
 
-After Phase 2, run the cleanup scripts to remove ghost VMware devices:
+### 22/02/2026
+Updated the Windows migration scripts to **v3.5**.
 
-→ See `README_Hidden_Devices_Remove.md` for `Hidden_Devices_Remove_Total_v3_0.ps1`
+Updated scripts:
+* `Windows_PreMigration_Fase1_v3.5.ps1` — Pre-migration: network backup, local admin creation (with visible password prompt), VMware Tools removal.
+* `Windows_PostMigration_Fase2_v3.5.ps1` — Post-migration: network restore via MAC matching, IPv6 disable, data disk validation and drive letter fix.
+* `GPO Scripts/Windows_PreMigration_Fase1_v1.0_GPO.ps1` — New unattended version of pre-migration for deployment via Group Policy to an AD OU.
+
+Key improvements in v3.5:
+* Dual-path compatibility: modern cmdlets (PS 4.0+) with automatic fallback to WMI/netsh/diskpart (PS 3.0).
+* Tested on Windows Server 2012 R2, 2016, 2019, and 2022.
+* No external dependencies — runs with built-in PowerShell cmdlets only.
+* Designed for restricted enterprise environments (no internet, no installs, PowerShell ISE).
+* Updated main README with full workflow, script inventory, and version evolution.
+
+### 19/09/2025
+Released `Hidden_Devices_Remove_Total_v3_0.ps1` — the unified cleanup toolkit.
+* Merged `Hidden_Devices_Remove.ps1` and `PostCutover_Network_Sanity.ps1` into a single script.
+* Added new `-Aggressive` mode for forced removal of VMware services.
+* Improved device search to use both Name patterns and Hardware ID (VEN_15AD).
+
+### 07/09/2025
+Added a complete and robust toolchain for the automated migration of Linux VMs from VMware to Hyper-V. This new suite, located in the "Linux migrations script" folder, provides a full end-to-end workflow.
+
+Key features include:
+* Pre-migration preparation (network backup, VMware Tools removal, safe GRUB modification).
+* Post-migration validation with an interactive cleanup option.
+* Universal compatibility across major distributions (RHEL, CentOS, Oracle Linux, Debian) and versions (e.g., EL6 to EL9).
+* A PowerShell front-end for automating key deployment and remote execution.
+
+### 05/09/2025
+Added two folders in the Migration script section. One for the Windows migrations script and one for the Linux migrations script.
+
+### 31/08/2025
+Added new script PostCutover_Network_Sanity.ps1 with some changes in case the VM still has the VMware tools installed in the VM. It will request to remove the VMware tools and then reboot.
 
 ---
 
@@ -108,6 +130,12 @@ After Phase 2, run the cleanup scripts to remove ghost VMware devices:
 
 MIT
 
-## Maintainer
+## Author
+
+**Luciano Patrão**
+
+## Contributing
+
+Contributions are welcome! Please open an issue or submit a pull request.
 
 Luciano Patrão
