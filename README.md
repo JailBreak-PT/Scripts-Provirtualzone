@@ -1,128 +1,41 @@
 # Scripts-Provirtualzone
 
-## Windows Migration Toolkit (VMware to Hyper-V)
+Migration toolkit for virtual machines from VMware to Hyper-V (or Proxmox). Covers both Windows and Linux guest operating systems.
 
-A complete set of PowerShell scripts for migrating Windows VMs from VMware to Hyper-V (or Proxmox). Designed for **restricted enterprise environments** with no internet access and no ability to install additional software.
-
-### Recommended Workflow
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  1. BEFORE MIGRATION — Run on the VMware VM                     │
-│     → Windows_PreMigration_Fase1_v3.5.ps1                       │
-│       Backs up network, creates migration user, removes         │
-│       VMware Tools                                              │
-├─────────────────────────────────────────────────────────────────┤
-│  2. MIGRATION                                                    │
-│     → Perform V2V (SCVMM, StarWind, or other V2V tool)          │
-├─────────────────────────────────────────────────────────────────┤
-│  3. AFTER MIGRATION — Run on the Hyper-V VM                      │
-│     → Windows_PostMigration_Fase2_v3.5.ps1                      │
-│       Restores network (IP/DNS/Gateway), disables IPv6,          │
-│       brings data disks online and fixes drive letters           │
-├─────────────────────────────────────────────────────────────────┤
-│  4. CLEANUP — Run on the Hyper-V VM                              │
-│     → Hidden_Devices_Remove_Total_v3_0.ps1 (recommended)        │
-│       Removes ghost VMware devices, cleans DriverStore,          │
-│       flushes DNS, resets Winsock, backup & restore support      │
-│                                                                  │
-│     → Force_VMwareToolsRemove.ps1 (only if needed)              │
-│       Last resort for corrupted VMware Tools that won't          │
-│       uninstall through normal methods                           │
-├─────────────────────────────────────────────────────────────────┤
-│  5. REBOOT and validate                                          │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Script Inventory
-
-| Script | Purpose | Version |
-|--------|---------|---------|
-| `Windows_PreMigration_Fase1_v3.5.ps1` | Pre-migration: network backup, local admin creation, VMware Tools removal | v3.5 |
-| `Windows_PostMigration_Fase2_v3.5.ps1` | Post-migration: network restore, IPv6 disable, data disk validation | v3.5 |
-| `Hidden_Devices_Remove_Total_v3_0.ps1` | **Full cleanup toolkit** — ghost devices, DriverStore, DNS, Winsock, with `-Aggressive` mode | v3.0 |
-| `Force_VMwareToolsRemove.ps1` | Last resort forceful VMware Tools removal (services, drivers, registry) | v1.0 |
-| `Hidden_Devices_Remove.ps1` | ⚠️ **Superseded by v3.0** — Simple ghost device removal (kept for reference) | v1.3 |
-| `PostCutover_Network_Sanity.ps1` | ⚠️ **Superseded by v3.0** — Cleanup toolkit without aggressive mode (kept for reference) | v2.2 |
-
-### GPO Scripts (subfolder: `GPO Scripts/`)
-
-| Script | Purpose | Version |
-|--------|---------|---------|
-| `Windows_PreMigration_Fase1_v1.0_GPO.ps1` | Unattended pre-migration for AD OU deployment via Group Policy | v1.0 |
-| `README_GPO_Deployment.md` | Step-by-step GPO deployment guide | — |
-
-> **Note:** `Hidden_Devices_Remove_Total_v3_0.ps1` is the unified evolution of both `Hidden_Devices_Remove.ps1` (v1.3) and `PostCutover_Network_Sanity.ps1` (v2.2). It combines all features from both scripts and adds the new `-Aggressive` mode for forced service removal. **New users should use v3.0.**
-
-### Compatibility
-
-All scripts automatically detect the PowerShell version and use the appropriate cmdlets:
-
-| Windows Server | PowerShell | Method |
-|---------------|------------|--------|
-| 2012 R2 | 3.0 / 4.0 | WMI, netsh, diskpart (legacy fallback) |
-| 2016 | 5.1 | Modern cmdlets (NetAdapter, Storage) |
-| 2019 | 5.1 | Modern cmdlets (NetAdapter, Storage) |
-| 2022 | 5.1 | Modern cmdlets (NetAdapter, Storage) |
-
-### Requirements
-
-- Run as **Administrator** (PowerShell ISE recommended)
-- No internet access required
-- No external modules or dependencies
-- Works with built-in Windows cmdlets only
-
-### Documentation
-
-Each script has its own detailed README:
-
-| README | Covers |
-|--------|--------|
-| `README_PrePostMigration.md` | Pre-migration (Fase1) and Post-migration (Fase2) scripts |
-| `README_Hidden_Devices_Remove.md` | Hidden Devices Remove scripts (v1.3 and v3.0) |
-| `README_PostCutover_Network_Sanity.md` | PostCutover Network Sanity script (v2.2) |
-| `README_VMwareToolsRemove.md` | Force VMware Tools Remove script |
-| `GPO Scripts/README_GPO_Deployment.md` | GPO deployment guide for AD OU automation |
+Designed for restricted enterprise environments — no internet access required, no external dependencies.
 
 ---
 
-## Changelog
+## Folders
 
-### 22/02/2026
-Updated the Windows migration scripts to **v3.5**.
+| Folder | Description | Status |
+|--------|-------------|--------|
+| `Windows migrations script/` | Full toolkit for Windows VMs: pre-migration, post-migration, device cleanup, GPO automation | ✅ Active |
+| `Linux migrations script/` | Toolchain for Linux VMs: pre-migration, post-migration, multi-distro support, PowerShell front-end | 🟡 On hold |
 
-Updated scripts:
-* `Windows_PreMigration_Fase1_v3.5.ps1` — Pre-migration: network backup, local admin creation (with visible password prompt), VMware Tools removal.
-* `Windows_PostMigration_Fase2_v3.5.ps1` — Post-migration: network restore via MAC matching, IPv6 disable, data disk validation and drive letter fix.
-* `GPO Scripts/Windows_PreMigration_Fase1_v1.0_GPO.ps1` — New unattended version of pre-migration for deployment via Group Policy to an AD OU.
+See each folder's README for full documentation, workflow guides, and script details.
 
-Key improvements in v3.5:
-* Dual-path compatibility: modern cmdlets (PS 4.0+) with automatic fallback to WMI/netsh/diskpart (PS 3.0).
-* Tested on Windows Server 2012 R2, 2016, 2019, and 2022.
-* No external dependencies — runs with built-in PowerShell cmdlets only.
-* Designed for restricted enterprise environments (no internet, no installs, PowerShell ISE).
-* Updated main README with full workflow, script inventory, and version evolution.
+---
 
-### 19/09/2025
-Released `Hidden_Devices_Remove_Total_v3_0.ps1` — the unified cleanup toolkit.
-* Merged `Hidden_Devices_Remove.ps1` and `PostCutover_Network_Sanity.ps1` into a single script.
-* Added new `-Aggressive` mode for forced removal of VMware services.
-* Improved device search to use both Name patterns and Hardware ID (VEN_15AD).
+## Latest Updates
 
-### 07/09/2025
-Added a complete and robust toolchain for the automated migration of Linux VMs from VMware to Hyper-V. This new suite, located in the "Linux migrations script" folder, provides a full end-to-end workflow.
+### 22/02/2026 — Windows
+* Added pre-migration script v3.5 (network backup, user creation, VMware Tools removal).
+* Added post-migration script v3.5 (network restore, IPv6 disable, disk validation).
+* Added GPO edition v1.0 for unattended AD OU deployment.
+* Removed old superseded scripts — replaced by `Hidden_Devices_Remove_Total_v3_0.ps1`.
 
-Key features include:
-* Pre-migration preparation (network backup, VMware Tools removal, safe GRUB modification).
-* Post-migration validation with an interactive cleanup option.
-* Universal compatibility across major distributions (RHEL, CentOS, Oracle Linux, Debian) and versions (e.g., EL6 to EL9).
-* A PowerShell front-end for automating key deployment and remote execution.
+### 19/09/2025 — Windows
+* Released unified cleanup toolkit v3.0 with `-Aggressive` mode.
+
+### 07/09/2025 — Linux
+* Added full Linux migration toolchain (RHEL, CentOS, Oracle Linux, Debian — EL6 to EL9).
 
 ### 05/09/2025
-Added two folders in the Migration script section. One for the Windows migrations script and one for the Linux migrations script.
+* Created separate folders for Windows and Linux migration scripts.
 
-### 31/08/2025
-Added new script PostCutover_Network_Sanity.ps1 with some changes in case the VM still has the VMware tools installed in the VM. It will request to remove the VMware tools and then reboot.
+### 31/08/2025 — Windows
+* Added PostCutover Network Sanity script for post-migration device cleanup.
 
 ---
 
@@ -137,5 +50,4 @@ MIT
 ## Contributing
 
 Contributions are welcome! Please open an issue or submit a pull request.
-
 Luciano Patrão
